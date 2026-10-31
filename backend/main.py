@@ -2,10 +2,11 @@ from fastapi import FastAPI
 
 from routes.analyze import router as analyze_router
 
+
 app = FastAPI(
     title="CrowdAgent",
     version="1.0.0",
-    description="CrowdAgent API"
+    description="AI-powered Synthetic User Testing Platform"
 )
 
 

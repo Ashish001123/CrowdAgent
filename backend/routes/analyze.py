@@ -4,6 +4,7 @@ from playwright.async_api import Error as PlaywrightError
 from services.browser_service import analyze_website
 from schema.schema import WebsiteScanRequest
 
+
 router = APIRouter(
     prefix="/analyzer",
     tags=["Website Analyzer"]
@@ -20,7 +21,11 @@ async def scan_website(request: WebsiteScanRequest):
         )
 
     try:
-        result = await analyze_website(str(request.url))
+
+        result = await analyze_website(
+            str(request.url),
+            request.expected_http_statuses
+        )
 
         return {
             "status": "success",
@@ -28,6 +33,7 @@ async def scan_website(request: WebsiteScanRequest):
         }
 
     except PlaywrightError as error:
+
         raise HTTPException(
             status_code=502,
             detail=f"Browser analysis failed: {str(error)}"

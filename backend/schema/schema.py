@@ -4,7 +4,9 @@ from pydantic import BaseModel, HttpUrl, Field
 class WebsiteScanRequest(BaseModel):
     url: HttpUrl
 
-    authorization_confirmed: bool = Field(
-        ...,
-        description="Developer confirms permission to test this website"
+    authorization_confirmed: bool
+
+    expected_http_statuses: dict[str, list[int]] = Field(
+        default_factory=dict,
+        description="Expected HTTP status codes mapped by endpoint path"
     )
