@@ -103,6 +103,11 @@ class ScanReport(BaseModel):
     issues: list[Issue]
     summary: ScanSummary
 
+    screenshot_path: str | None = Field(
+        default=None,
+        description="File path to the full-page screenshot captured during the scan"
+    )
+
     scanned_at: datetime = Field(
         description="UTC timestamp when the scan completed"
     )

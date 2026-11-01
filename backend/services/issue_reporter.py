@@ -164,15 +164,11 @@ def generate_report(scan_result: dict) -> ScanReport:
     issues: list[Issue] = []
     counter = 1
 
-    # ── 1. HTTP errors (already classified by issue_classifier) ──
-
     for raw_issue in scan_result.get("issues", []):
         issue = _build_http_issue(raw_issue, page_url, counter)
         if issue is not None:
             issues.append(issue)
             counter += 1
-
-    # ── 2. Console errors ──
 
     for error in scan_result.get("console_errors", []):
         issues.append(
@@ -180,23 +176,17 @@ def generate_report(scan_result: dict) -> ScanReport:
         )
         counter += 1
 
-    # ── 3. Page errors (uncaught JS exceptions) ──
-
     for error_text in scan_result.get("page_errors", []):
         issues.append(
             _build_page_error_issue(error_text, page_url, counter)
         )
-        counter += 1
-
-    # ── 4. Failed network requests ──
+        counter += 1    
 
     for request in scan_result.get("failed_requests", []):
         issues.append(
             _build_failed_request_issue(request, page_url, counter)
         )
         counter += 1
-
-    # ── Build summary and report ──
 
     summary = _build_summary(issues)
 
@@ -210,6 +200,7 @@ def generate_report(scan_result: dict) -> ScanReport:
         forms_count=scan_result.get("forms_count", 0),
         issues=issues,
         summary=summary,
+        screenshot_path=scan_result.get("screenshot_path"),
         scanned_at=datetime.now(timezone.utc)
     )
 
