@@ -3,6 +3,7 @@ from playwright.async_api import Error as PlaywrightError
 
 from services.browser_service import analyze_website
 from services.issue_reporter import generate_report
+from services.url_validator import validate_url, URLValidationError
 from schema.schema import WebsiteScanRequest, ScanReport
 
 
@@ -19,6 +20,15 @@ async def scan_website(request: WebsiteScanRequest):
         raise HTTPException(
             status_code=403,
             detail="Authorization confirmation is required."
+        )
+
+    # ── Validate URL before scanning (SSRF protection) ──
+    try:
+        validate_url(str(request.url))
+    except URLValidationError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
         )
 
     try:
