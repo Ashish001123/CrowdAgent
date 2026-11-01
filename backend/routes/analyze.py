@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException
 from playwright.async_api import Error as PlaywrightError
 
 from services.browser_service import analyze_website
-from schema.schema import WebsiteScanRequest
+from services.issue_reporter import generate_report
+from schema.schema import WebsiteScanRequest, ScanReport
 
 
 router = APIRouter(
@@ -11,7 +12,7 @@ router = APIRouter(
 )
 
 
-@router.post("/scan")
+@router.post("/scan", response_model=ScanReport)
 async def scan_website(request: WebsiteScanRequest):
 
     if not request.authorization_confirmed:
@@ -22,15 +23,14 @@ async def scan_website(request: WebsiteScanRequest):
 
     try:
 
-        result = await analyze_website(
+        raw_result = await analyze_website(
             str(request.url),
             request.expected_http_statuses
         )
 
-        return {
-            "status": "success",
-            "data": result
-        }
+        report = generate_report(raw_result)
+
+        return report
 
     except PlaywrightError as error:
 
