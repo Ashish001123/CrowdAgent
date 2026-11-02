@@ -5,9 +5,11 @@ from playwright.async_api import async_playwright
 
 from schema.schema import (
     JourneyScenario,
+    JourneyStep,
     JourneyReport,
     StepResult,
     ActionType,
+    LoginJourneyRequest,
 )
 from services.url_validator import validate_url, URLValidationError
 
@@ -118,6 +120,25 @@ async def execute_journey(scenario: JourneyScenario) -> JourneyReport:
                             f"Step {idx}: Assert text '{expected_text}' exists in '{step.selector}'"
                         )
 
+                    elif step.action == ActionType.ASSERT_URL:
+                        expected_url_part = step.value or ""
+                        current_url = page.url
+                        if expected_url_part.lower() not in current_url.lower():
+                            try:
+                                await page.wait_for_url(f"**/*{expected_url_part}*", timeout=5000)
+                                current_url = page.url
+                            except Exception:
+                                pass
+
+                        if expected_url_part.lower() not in current_url.lower():
+                            raise AssertionError(
+                                f"Expected URL to contain '{expected_url_part}', but actual URL is '{current_url}'"
+                            )
+
+                        reproduction_steps.append(
+                            f"Step {idx}: Assert URL contains '{expected_url_part}' (Current: '{current_url}')"
+                        )
+
                     elif step.action == ActionType.WAIT:
                         seconds = float(step.value or 1.0)
                         await page.wait_for_timeout(seconds * 1000)
@@ -168,8 +189,6 @@ async def execute_journey(scenario: JourneyScenario) -> JourneyReport:
                             screenshot_path=failure_screenshot
                         )
                     )
-
-                    # Halt journey on first critical failure
                     break
 
         finally:
@@ -192,3 +211,71 @@ async def execute_journey(scenario: JourneyScenario) -> JourneyReport:
         reproduction_steps=reproduction_steps,
         executed_at=datetime.now(timezone.utc)
     )
+
+
+def create_login_scenario(request: LoginJourneyRequest) -> JourneyScenario:
+    """
+    Construct a deterministic JourneyScenario from a LoginJourneyRequest.
+    Ensures safe handling of credentials and standardizes the authentication flow.
+    """
+
+    steps = [
+        JourneyStep(
+            action=ActionType.NAVIGATE,
+            value=str(request.login_url),
+            description=f"Navigate to login page: {request.login_url}"
+        ),
+        JourneyStep(
+            action=ActionType.FILL,
+            selector=request.username_selector,
+            value=request.username_or_email,
+            description=f"Enter username/email: {request.username_or_email}"
+        ),
+        JourneyStep(
+            action=ActionType.FILL,
+            selector=request.password_selector,
+            value=request.password,
+            description="Enter password"
+        ),
+        JourneyStep(
+            action=ActionType.CLICK,
+            selector=request.submit_selector,
+            description="Click login submit button"
+        ),
+    ]
+
+    if request.expected_url_contains:
+        steps.append(
+            JourneyStep(
+                action=ActionType.ASSERT_URL,
+                value=request.expected_url_contains,
+                description=f"Verify destination URL contains '{request.expected_url_contains}'"
+            )
+        )
+
+    if request.expected_element_selector:
+        steps.append(
+            JourneyStep(
+                action=ActionType.ASSERT_VISIBLE,
+                selector=request.expected_element_selector,
+                description=f"Verify authenticated element '{request.expected_element_selector}' is visible"
+            )
+        )
+
+    if not request.expected_url_contains and not request.expected_element_selector:
+        steps.append(
+            JourneyStep(
+                action=ActionType.WAIT,
+                value="2.0",
+                description="Wait for post-login redirection or state change"
+            )
+        )
+
+    return JourneyScenario(
+        scenario_id=f"SCN-LOGIN-{int(time.time())}",
+        name=f"Automated Login Verification ({request.persona})",
+        persona=request.persona,
+        objective=f"Test authentication flow on {request.login_url} and verify successful sign-in.",
+        steps=steps
+    )
+

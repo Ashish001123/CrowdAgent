@@ -123,6 +123,7 @@ class ActionType(str, Enum):
     FILL = "fill"
     ASSERT_VISIBLE = "assert_visible"
     ASSERT_TEXT = "assert_text"
+    ASSERT_URL = "assert_url"
     WAIT = "wait"
 
 
@@ -215,4 +216,55 @@ class JourneyRunRequest(BaseModel):
 
     scenario: JourneyScenario
     authorization_confirmed: bool
+
+
+class LoginJourneyRequest(BaseModel):
+    """Request to execute an automated login journey."""
+
+    login_url: HttpUrl = Field(
+        description="URL of the login page"
+    )
+
+    username_or_email: str = Field(
+        description="Username or email for authentication"
+    )
+
+    password: str = Field(
+        description="Password for authentication (masked in logs and reports)"
+    )
+
+    username_selector: str = Field(
+        default="input[type='email'], input[name='email'], input[name='username'], #email, #username",
+        description="Selector for the username or email field"
+    )
+
+    password_selector: str = Field(
+        default="input[type='password'], input[name='password'], #password",
+        description="Selector for the password field"
+    )
+
+    submit_selector: str = Field(
+        default="button[type='submit'], input[type='submit'], button:has-text('Login'), button:has-text('Sign In'), button:has-text('Log In')",
+        description="Selector for the login submit button"
+    )
+
+    expected_url_contains: str | None = Field(
+        default=None,
+        description="Substring expected in the destination URL upon successful login (e.g. 'dashboard')"
+    )
+
+    expected_element_selector: str | None = Field(
+        default=None,
+        description="Selector of an element expected to be visible on successful login (e.g. 'button:has-text(\"Logout\")')"
+    )
+
+    persona: str = Field(
+        default="New User",
+        description="Persona running this login test"
+    )
+
+    authorization_confirmed: bool = Field(
+        description="Must be true to authorize testing"
+    )
+
 
