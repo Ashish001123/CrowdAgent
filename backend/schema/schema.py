@@ -268,3 +268,124 @@ class LoginJourneyRequest(BaseModel):
     )
 
 
+# ── Form Validation Models ───────────────────────────────────
+
+
+class FormFieldConfig(BaseModel):
+    """Configuration for testing a specific form field."""
+
+    selector: str = Field(
+        description="Selector for the input field (e.g. input[name='email'])"
+    )
+
+    name: str = Field(
+        description="Field identifier or label name"
+    )
+
+    field_type: str = Field(
+        default="text",
+        description="Field type: text, email, number, password, textarea, select"
+    )
+
+    required: bool = Field(
+        default=True,
+        description="Whether this field is expected to be mandatory"
+    )
+
+    valid_value: str = Field(
+        default="TestValue",
+        description="Valid sample data for this field"
+    )
+
+    invalid_value: str | None = Field(
+        default=None,
+        description="Intentionally invalid data for edge-case validation testing"
+    )
+
+
+class FormValidationRequest(BaseModel):
+    """Request to test a form for edge cases and input validation."""
+
+    url: HttpUrl = Field(
+        description="URL containing the form to test"
+    )
+
+    form_selector: str = Field(
+        default="form",
+        description="Selector for the target form element"
+    )
+
+    fields: list[FormFieldConfig] = Field(
+        default_factory=list,
+        description="List of fields to test. If empty, fields will be auto-discovered."
+    )
+
+    submit_selector: str = Field(
+        default="button[type='submit'], input[type='submit'], button:has-text('Submit'), button:has-text('Send')",
+        description="Selector for the submit button"
+    )
+
+    test_empty_submission: bool = Field(
+        default=True,
+        description="Test submitting empty form to verify required fields are blocked"
+    )
+
+    test_invalid_inputs: bool = Field(
+        default=True,
+        description="Test submitting malformed inputs (invalid emails, bad formats)"
+    )
+
+    test_valid_submission: bool = Field(
+        default=False,
+        description="Test valid input submission (disabled by default to prevent spamming)"
+    )
+
+    expected_error_selector: str | None = Field(
+        default=None,
+        description="Optional selector for custom inline error elements"
+    )
+
+    persona: str = Field(
+        default="Edge Case Hunter",
+        description="Persona running this test"
+    )
+
+    authorization_confirmed: bool = Field(
+        description="Must be true to authorize testing"
+    )
+
+
+class FormTestCaseResult(BaseModel):
+    """Result of an individual form test case."""
+
+    test_case: str
+    status: str = Field(
+        description="'passed', 'failed', or 'warning'"
+    )
+    description: str
+    evidence: str
+    screenshot_path: str | None = None
+
+
+class FormValidationReport(BaseModel):
+    """Comprehensive report detailing form validation and edge-case behavior."""
+
+    url: str
+    form_selector: str
+    persona: str
+    total_tests: int
+    passed_tests: int
+    failed_tests: int
+    overall_status: str = Field(
+        description="'passed' if all tests passed, 'failed' otherwise"
+    )
+    summary: str
+    test_cases: list[FormTestCaseResult]
+    detected_fields: list[dict] = Field(
+        default_factory=list,
+        description="Fields automatically discovered on the form"
+    )
+    executed_at: datetime
+
+
+
